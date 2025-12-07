@@ -20,7 +20,8 @@ logger.add(
 )
 
 # --- Constants ---
-MODEL_NAME = "maternion/fara:7b"
+#MODEL_NAME = "maternion/fara:7b"
+MODEL_NAME = "llama3.2-vision"
 
 # --- Reinforcement Learning Components ---
 
@@ -58,12 +59,15 @@ def get_game_score(monitor_score):
     Captures a screenshot of the score region and uses the Fara model to extract the score.
     """
     try:
+        print("get_game_score cp1")
         score_image_data = capture_screenshot(monitor_score)
+        print("get_game_score cp2")
         encoded_image = base64.b64encode(score_image_data).decode('utf-8')
-
+        print("get_game_score cp3")
         prompt = "Analyze the attached image and return ONLY the numerical score shown. For example, if the score is '12345', your response should be just '12345'."
-
-        response = ollama.chat(
+        print("get_game_score cp4")
+        client = ollama.Client(timeout=60)
+        response = client.chat(
             model=MODEL_NAME,
             messages=[
                 {
@@ -73,7 +77,7 @@ def get_game_score(monitor_score):
                 },
             ],
         )
-        
+        print("get_game_score cp5")
         # Extract numbers from the response and convert to an integer
         score_text = "".join(filter(str.isdigit, response['message']['content']))
         if score_text:
@@ -87,10 +91,12 @@ def get_game_score(monitor_score):
         return 0
 
 def send_to_fara(image_data, experiences):
+    print("send_to_fara cp1")
     """Sends the screenshot and past experiences to the Fara model."""
     encoded_image = base64.b64encode(image_data).decode('utf-8')
-
+    print("send_to_fara cp2")
     experience_prompt = "Here are some recent experiences (action, reward):\n"
+    print("send_to_fara cp3")
     if experiences:
         for action, reward, _ in experiences:
             outcome = "good" if reward > 0 else "bad" if reward < 0 else "neutral"
@@ -98,6 +104,7 @@ def send_to_fara(image_data, experiences):
     else:
         experience_prompt += "- No recent experiences.\n"
 
+    print("send_to_fara cp4")
     prompt = (
         "You are a world-class Tetris AI. Your goal is to achieve the highest score possible.\n"
         "Analyze the attached image of the game board. Based on the position of the falling piece "
@@ -105,8 +112,9 @@ def send_to_fara(image_data, experiences):
         "Your response MUST be one of the following keywords: 'left', 'right', 'up' (for rotate), or 'down'.\n\n"
         f"{experience_prompt}"
     )
-
-    response = ollama.chat(
+    print("send_to_fara cp5 : ollama.chat")
+    client = ollama.Client(timeout=60)
+    response = client.chat(
         model=MODEL_NAME,
         messages=[
             {
@@ -116,6 +124,7 @@ def send_to_fara(image_data, experiences):
             },
         ],
     )
+    print("send_to_fara cp6")
     return response['message']['content']
 
 def parse_action(response):
@@ -142,13 +151,13 @@ def execute_action(action):
 def main():
     """The main loop for the Tetris AI with reinforcement learning."""
     
-    # --- CRITICAL CONFIGURATION ---
+    # --- Configuration ---
     # You MUST update these pixel values to match the location of the
     # game and score on YOUR screen. Use a screenshot tool to find the
     # correct coordinates.
     monitor_game = {"top": 100, "left": 50, "width": 400, "height": 800}
-    monitor_score = {"top": 50, "left": 500, "width": 200, "height": 50}
-
+    monitor_score = {"top": 428, "left": 243, "width": 100, "height": 35}
+    #monitor_score = {"top": 0, "left": 0, "width": 100, "height": 100}
     # RL parameters
     epsilon = 0.1
     replay_buffer = ReplayBuffer(max_size=1000)
