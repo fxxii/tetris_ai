@@ -1,10 +1,23 @@
-import ollama
-import mss
-import pyautogui
-import time
 import base64
 import random
+import sys
+import time
 from collections import deque
+
+import mss
+import ollama
+import pyautogui
+from loguru import logger
+
+# ---------------------------
+# Logging
+# ---------------------------
+logger.remove()
+logger.add(
+    sys.stderr,
+    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+    level="DEBUG",
+)
 
 # --- Constants ---
 MODEL_NAME = "maternion/fara:7b"
@@ -64,12 +77,13 @@ def get_game_score(monitor_score):
         # Extract numbers from the response and convert to an integer
         score_text = "".join(filter(str.isdigit, response['message']['content']))
         if score_text:
+            logger.debug(f"Successfully parsed score: {score_text}")
             return int(score_text)
         else:
-            print(f"Warning: Fara could not read the score. Response: '{response['message']['content']}'")
+            logger.warning(f"Fara could not read the score. Response: '{response['message']['content']}'")
             return 0
     except Exception as e:
-        print(f"Error reading score with Fara: {e}")
+        logger.error(f"Error reading score with Fara: {e}")
         return 0
 
 def send_to_fara(image_data, experiences):
@@ -120,15 +134,18 @@ def parse_action(response):
 def execute_action(action):
     """Executes the specified action by pressing the corresponding key."""
     if action:
-        print(f"Executing action: {action}")
+        logger.info(f"Executing action: {action}")
         pyautogui.press(action)
     else:
-        print("No action determined.")
+        logger.warning("No action determined from model response.")
 
 def main():
     """The main loop for the Tetris AI with reinforcement learning."""
     
-    # --- Configuration ---
+    # --- CRITICAL CONFIGURATION ---
+    # You MUST update these pixel values to match the location of the
+    # game and score on YOUR screen. Use a screenshot tool to find the
+    # correct coordinates.
     monitor_game = {"top": 100, "left": 50, "width": 400, "height": 800}
     monitor_score = {"top": 50, "left": 500, "width": 200, "height": 50}
 
@@ -137,36 +154,53 @@ def main():
     replay_buffer = ReplayBuffer(max_size=1000)
     possible_actions = ["left", "right", "up", "down"]
 
-    print("Starting Tetris AI in 5 seconds...")
+    logger.info("Starting Tetris AI in 5 seconds... Click on the game window!")
     time.sleep(5)
-    print("AI active.")
+    logger.info("AI active.")
 
     last_score = get_game_score(monitor_score)
+    logger.info(f"Initial score detected: {last_score}")
 
     while True:
+        logger.debug("--- New Turn ---")
+        logger.debug("Capturing screenshot...")
         screenshot_data = capture_screenshot(monitor_game)
 
         if random.random() < epsilon:
             action = random.choice(possible_actions)
-            print(f"Exploring: chose random action '{action}'")
+            logger.info(f"Exploring: Chose random action '{action}'")
         else:
+            logger.debug("Sampling experiences from replay buffer...")
             experiences = replay_buffer.sample(batch_size=5)
+
+            logger.debug("Sending screenshot and experiences to Fara...")
             response = send_to_fara(screenshot_data, experiences)
+
+            logger.debug(f"Fara response: '{response.strip()}'")
             action = parse_action(response)
-            print(f"Exploiting: Fara suggests '{action}' based on response: '{response[:50]}...'")
+            logger.info(f"Exploiting: Fara suggests '{action}'")
 
         execute_action(action)
         
+        logger.debug("Pausing for action to take effect...")
         time.sleep(0.5) 
 
+        logger.debug("Getting current score...")
         current_score = get_game_score(monitor_score)
         reward = current_score - last_score
+
+        if reward != 0:
+            logger.success(f"Score changed! Current: {current_score}, Last: {last_score}, Reward: {reward}")
+        else:
+            logger.debug(f"No score change. Current: {current_score}")
+
         last_score = current_score
-        print(f"Reward for action '{action}': {reward}")
 
         experience = (action, reward, hash(screenshot_data))
+        logger.debug(f"Adding experience to replay buffer: ({action}, {reward})")
         replay_buffer.add(experience)
 
+        logger.debug("Pausing before next turn...")
         time.sleep(1)
 
 if __name__ == "__main__":
