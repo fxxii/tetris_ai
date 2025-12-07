@@ -85,8 +85,11 @@ def send_to_fara(image_data, experiences):
         experience_prompt += "- No recent experiences.\n"
 
     prompt = (
-        "You are a helpful assistant. Describe the attached image in detail. "
-        "What game is being played? What color are the blocks?"
+        "You are a world-class Tetris AI. Your goal is to achieve the highest score possible.\n"
+        "Analyze the attached image of the game board. Based on the position of the falling piece "
+        "and the existing blocks, determine the single best action to take.\n\n"
+        "Your response MUST be one of the following keywords: 'left', 'right', 'up' (for rotate), or 'down'.\n\n"
+        f"{experience_prompt}"
     )
 
     response = ollama.chat(
