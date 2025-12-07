@@ -26,7 +26,7 @@ logger.add(
 
 #MODEL_NAME = "maternion/fara:7b"
 MODEL_NAME = "llama3.2-vision"
-
+IMAGE_DIR = "screencap"
 RESIZE_FACTOR = 0.5  # Resize to 50% of the original size
 
 
@@ -186,8 +186,8 @@ def main():
     # You MUST update these pixel values to match the location of the
     # game and score on YOUR screen. Use a screenshot tool to find the
     # correct coordinates.
-    monitor_game = {"top": 100, "left": 50, "width": 400, "height": 800}
-    monitor_score = {"top": 50, "left": 500, "width": 200, "height": 50}
+    monitor_game = {"top": 145, "left": 125, "width": 790, "height": 850}
+    monitor_score = {"top": 465, "left": 240, "width": 100, "height": 30}
 
     # RL parameters
     epsilon = 0.1

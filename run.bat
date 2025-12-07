@@ -1,0 +1,8 @@
+set OLLAMA_NUM_GPU=1
+set OLLAMA_MAX_GPU_MEMORY=11g
+set OLLAMA_FLASH_ATTENTION=1
+set OLLAMA_GPU_OVERLAP=1
+set OLLAMA_KV_CACHE_TYPE=q8
+
+ollama run llama3.2-vision:latest
+
