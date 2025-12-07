@@ -22,13 +22,10 @@ logger.add(
 )
 
 # --- Constants ---
-<<<<<<< HEAD
 #MODEL_NAME = "maternion/fara:7b"
 MODEL_NAME = "llama3.2-vision"
-=======
-MODEL_NAME = "maternion/fara:7b"
 RESIZE_FACTOR = 0.5  # Resize to 50% of the original size
->>>>>>> 65f70e3b7002ce62b752fcce7392fabeab99a001
+
 
 # --- Reinforcement Learning Components ---
 
