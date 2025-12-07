@@ -7,7 +7,8 @@ import random
 from collections import deque
 
 # --- Constants ---
-MODEL_NAME = "maternion/fara:7b"
+#MODEL_NAME = "maternion/fara:7b"
+MODEL_NAME = "llama3.2-vision"
 
 # --- Reinforcement Learning Components ---
 
@@ -64,6 +65,7 @@ def get_game_score(monitor_score):
         # Extract numbers from the response and convert to an integer
         score_text = "".join(filter(str.isdigit, response['message']['content']))
         if score_text:
+            print(f"Score text: '{score_text}'")
             return int(score_text)
         else:
             print(f"Warning: Fara could not read the score. Response: '{response['message']['content']}'")
@@ -126,9 +128,9 @@ def main():
     """The main loop for the Tetris AI with reinforcement learning."""
     
     # --- Configuration ---
-    monitor_game = {"top": 100, "left": 50, "width": 400, "height": 800}
-    monitor_score = {"top": 50, "left": 500, "width": 200, "height": 50}
-
+    monitor_game = {"top": 456, "left": 158, "width": 804, "height": 856}
+    monitor_score = {"top": 415, "left": 264, "width": 450, "height": 364}
+    #monitor_score = {"top": 0, "left": 0, "width": 100, "height": 100}
     # RL parameters
     epsilon = 0.1
     replay_buffer = ReplayBuffer(max_size=1000)
