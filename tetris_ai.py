@@ -5,6 +5,7 @@ import time
 import os
 from collections import deque
 from io import BytesIO
+from httpx import Timeout
 
 import mss
 import ollama
@@ -24,8 +25,8 @@ logger.add(
 
 # --- Constants ---
 
-#MODEL_NAME = "maternion/fara:7b"
-MODEL_NAME = "llama3.2-vision"
+MODEL_NAME = "maternion/fara:7b"
+#MODEL_NAME = "llama3.2-vision"
 IMAGE_DIR = "screencap"
 RESIZE_FACTOR = 0.5  # Resize to 50% of the original size
 
@@ -34,7 +35,7 @@ RESIZE_FACTOR = 0.5  # Resize to 50% of the original size
 
 class ReplayBuffer:
     """A simple replay buffer to store experiences."""
-    def __init__(self, max_size=1000):
+    def __init__(self, max_size=100):
         self.buffer = deque(maxlen=max_size)
 
     def add(self, experience):
