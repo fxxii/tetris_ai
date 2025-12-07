@@ -3,11 +3,13 @@ import random
 import sys
 import time
 from collections import deque
+from io import BytesIO
 
 import mss
 import ollama
 import pyautogui
 from loguru import logger
+from PIL import Image
 
 # ---------------------------
 # Logging
@@ -21,6 +23,7 @@ logger.add(
 
 # --- Constants ---
 MODEL_NAME = "maternion/fara:7b"
+RESIZE_FACTOR = 0.5  # Resize to 50% of the original size
 
 # --- Reinforcement Learning Components ---
 
@@ -48,10 +51,26 @@ class ReplayBuffer:
 # --- Game Interaction and AI Logic ---
 
 def capture_screenshot(monitor):
-    """Captures a screenshot of the specified monitor region and returns raw bytes."""
+    """
+    Captures a screenshot, resizes it, and returns the raw bytes of the resized image.
+    """
     with mss.mss() as sct:
         sct_img = sct.grab(monitor)
-        return mss.tools.to_png(sct_img.rgb, sct_img.size)
+
+        # Convert to a Pillow Image
+        img = Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
+
+        # Resize the image
+        new_width = int(img.width * RESIZE_FACTOR)
+        new_height = int(img.height * RESIZE_FACTOR)
+        resized_img = img.resize((new_width, new_height), Image.LANCZOS)
+
+        logger.debug(f"Resized screenshot from {img.width}x{img.height} to {new_width}x{new_height}")
+
+        # Convert back to bytes in PNG format
+        buffer = BytesIO()
+        resized_img.save(buffer, format="PNG")
+        return buffer.getvalue()
 
 def get_game_score(monitor_score):
     """
@@ -163,7 +182,7 @@ def main():
 
     while True:
         logger.debug("--- New Turn ---")
-        logger.debug("Capturing screenshot...")
+        logger.debug("Capturing and resizing screenshot...")
         screenshot_data = capture_screenshot(monitor_game)
 
         if random.random() < epsilon:
