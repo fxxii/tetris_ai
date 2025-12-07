@@ -97,8 +97,10 @@ def get_game_score(monitor_score):
         encoded_image = base64.b64encode(score_image_data).decode('utf-8')
 
         prompt = "Analyze the attached image and return ONLY the numerical score shown. For example, if the score is '12345', your response should be just '12345'."
-
-        response = ollama.chat(
+        client = ollama.Client(
+            timeout=Timeout(60)   # <-- timeout in seconds
+        )
+        response = client.chat(
             model=MODEL_NAME,
             messages=[
                 {
@@ -141,7 +143,10 @@ def send_to_fara(image_data, experiences):
         f"{experience_prompt}"
     )
 
-    response = ollama.chat(
+    client = ollama.Client(
+            timeout=Timeout(60)   # <-- timeout in seconds
+    )
+    response = client.chat(
         model=MODEL_NAME,
         messages=[
             {
