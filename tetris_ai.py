@@ -2,6 +2,7 @@ import base64
 import random
 import sys
 import time
+import os
 from collections import deque
 from io import BytesIO
 
@@ -22,13 +23,9 @@ logger.add(
 )
 
 # --- Constants ---
-<<<<<<< HEAD
-#MODEL_NAME = "maternion/fara:7b"
-MODEL_NAME = "llama3.2-vision"
-=======
 MODEL_NAME = "maternion/fara:7b"
 RESIZE_FACTOR = 0.5  # Resize to 50% of the original size
->>>>>>> 65f70e3b7002ce62b752fcce7392fabeab99a001
+IMAGE_DIR = "captured_images"
 
 # --- Reinforcement Learning Components ---
 
@@ -55,9 +52,10 @@ class ReplayBuffer:
 
 # --- Game Interaction and AI Logic ---
 
-def capture_screenshot(monitor):
+def capture_screenshot(monitor, save_path=None):
     """
     Captures a screenshot, resizes it, and returns the raw bytes of the resized image.
+    Optionally saves the image to a file.
     """
     with mss.mss() as sct:
         sct_img = sct.grab(monitor)
@@ -72,6 +70,14 @@ def capture_screenshot(monitor):
 
         logger.debug(f"Resized screenshot from {img.width}x{img.height} to {new_width}x{new_height}")
 
+        # Save the image if a path is provided
+        if save_path:
+            try:
+                resized_img.save(save_path)
+                logger.debug(f"Saved screenshot to {save_path}")
+            except Exception as e:
+                logger.error(f"Failed to save screenshot to {save_path}: {e}")
+
         # Convert back to bytes in PNG format
         buffer = BytesIO()
         resized_img.save(buffer, format="PNG")
@@ -82,15 +88,14 @@ def get_game_score(monitor_score):
     Captures a screenshot of the score region and uses the Fara model to extract the score.
     """
     try:
-        print("get_game_score cp1")
-        score_image_data = capture_screenshot(monitor_score)
-        print("get_game_score cp2")
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        save_path = os.path.join(IMAGE_DIR, "score", f"score_{timestamp}.png")
+        score_image_data = capture_screenshot(monitor_score, save_path=save_path)
         encoded_image = base64.b64encode(score_image_data).decode('utf-8')
-        print("get_game_score cp3")
+
         prompt = "Analyze the attached image and return ONLY the numerical score shown. For example, if the score is '12345', your response should be just '12345'."
-        print("get_game_score cp4")
-        client = ollama.Client(timeout=60)
-        response = client.chat(
+
+        response = ollama.chat(
             model=MODEL_NAME,
             messages=[
                 {
@@ -100,7 +105,7 @@ def get_game_score(monitor_score):
                 },
             ],
         )
-        print("get_game_score cp5")
+
         # Extract numbers from the response and convert to an integer
         score_text = "".join(filter(str.isdigit, response['message']['content']))
         if score_text:
@@ -114,12 +119,10 @@ def get_game_score(monitor_score):
         return 0
 
 def send_to_fara(image_data, experiences):
-    print("send_to_fara cp1")
     """Sends the screenshot and past experiences to the Fara model."""
     encoded_image = base64.b64encode(image_data).decode('utf-8')
-    print("send_to_fara cp2")
+
     experience_prompt = "Here are some recent experiences (action, reward):\n"
-    print("send_to_fara cp3")
     if experiences:
         for action, reward, _ in experiences:
             outcome = "good" if reward > 0 else "bad" if reward < 0 else "neutral"
@@ -127,7 +130,6 @@ def send_to_fara(image_data, experiences):
     else:
         experience_prompt += "- No recent experiences.\n"
 
-    print("send_to_fara cp4")
     prompt = (
         "You are a world-class Tetris AI. Your goal is to achieve the highest score possible.\n"
         "Analyze the attached image of the game board. Based on the position of the falling piece "
@@ -135,9 +137,8 @@ def send_to_fara(image_data, experiences):
         "Your response MUST be one of the following keywords: 'left', 'right', 'up' (for rotate), or 'down'.\n\n"
         f"{experience_prompt}"
     )
-    print("send_to_fara cp5 : ollama.chat")
-    client = ollama.Client(timeout=60)
-    response = client.chat(
+
+    response = ollama.chat(
         model=MODEL_NAME,
         messages=[
             {
@@ -147,7 +148,6 @@ def send_to_fara(image_data, experiences):
             },
         ],
     )
-    print("send_to_fara cp6")
     return response['message']['content']
 
 def parse_action(response):
@@ -174,13 +174,18 @@ def execute_action(action):
 def main():
     """The main loop for the Tetris AI with reinforcement learning."""
     
-    # --- Configuration ---
+    # --- Directory Setup ---
+    os.makedirs(os.path.join(IMAGE_DIR, "game"), exist_ok=True)
+    os.makedirs(os.path.join(IMAGE_DIR, "score"), exist_ok=True)
+    logger.info(f"Saving screenshots to '{IMAGE_DIR}/' directory.")
+
+    # --- CRITICAL CONFIGURATION ---
     # You MUST update these pixel values to match the location of the
     # game and score on YOUR screen. Use a screenshot tool to find the
     # correct coordinates.
     monitor_game = {"top": 100, "left": 50, "width": 400, "height": 800}
-    monitor_score = {"top": 428, "left": 243, "width": 100, "height": 35}
-    #monitor_score = {"top": 0, "left": 0, "width": 100, "height": 100}
+    monitor_score = {"top": 50, "left": 500, "width": 200, "height": 50}
+
     # RL parameters
     epsilon = 0.1
     replay_buffer = ReplayBuffer(max_size=1000)
@@ -193,10 +198,15 @@ def main():
     last_score = get_game_score(monitor_score)
     logger.info(f"Initial score detected: {last_score}")
 
+    turn_number = 0
     while True:
-        logger.debug("--- New Turn ---")
+        turn_number += 1
+        logger.debug(f"--- Turn {turn_number} ---")
+
+        timestamp = time.strftime("%Y%m%d-%H%M%S")
+        save_path = os.path.join(IMAGE_DIR, "game", f"turn_{turn_number}_{timestamp}.png")
         logger.debug("Capturing and resizing screenshot...")
-        screenshot_data = capture_screenshot(monitor_game)
+        screenshot_data = capture_screenshot(monitor_game, save_path=save_path)
 
         if random.random() < epsilon:
             action = random.choice(possible_actions)
@@ -228,6 +238,8 @@ def main():
 
         last_score = current_score
 
+        # The hash is calculated from the *resized* screenshot data. This ensures the AI's
+        # memory of a state is consistent with the visual data it uses for decisions.
         experience = (action, reward, hash(screenshot_data))
         logger.debug(f"Adding experience to replay buffer: ({action}, {reward})")
         replay_buffer.add(experience)
