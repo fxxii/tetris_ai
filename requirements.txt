@@ -1,3 +1,4 @@
-ollama
-mss
-pyautogui
+torch
+torchvision
+numpy
+pygame
