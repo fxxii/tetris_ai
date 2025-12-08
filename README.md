@@ -83,7 +83,3 @@ Once you have configured the screen coordinates, you are ready to run the AI.
     ```
 4.  The script will pause for 5 seconds. **Click on the Tetris game window to make it active.**
 5.  The AI will then start playing the game. You will see its decisions and the calculated rewards printed in your terminal.
-
-Teteris reference
-
-https://github.com/jakesgordon/javascript-tetris
